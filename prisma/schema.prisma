@@ -1,0 +1,148 @@
+// Prisma schema — Personal Developer Workspace (Pinkspace)
+// SQLite for local development, easily switchable to PostgreSQL for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id          String       @id @default(cuid())
+  name        String
+  ownerId     String?
+  createdAt   DateTime     @default(now())
+  resources      Resource[]
+  categories     Category[]
+  collections    Collection[]
+  userPreference UserPreference?
+}
+
+model Resource {
+  id             String               @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id])
+  title          String
+  description    String
+  sourceType     String               // "FILE" | "LINK"
+  fileUrl        String?
+  externalUrl    String?
+  provider       String?              // "manual" | "github" | etc.
+  categoryId     String
+  category       Category             @relation(fields: [categoryId], references: [id])
+  tags           ResourceTag[]
+  thumbnailUrl   String?
+  iconEmoji      String?
+  currentVersion String               @default("1.0.0")
+  isFavorite     Boolean              @default(false)
+  openCount      Int                  @default(0)
+  downloadCount  Int                  @default(0)
+  lastOpenedAt   DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  versions       ResourceVersion[]
+  collections    CollectionResource[]
+
+  @@index([workspaceId])
+  @@index([categoryId])
+}
+
+model ResourceVersion {
+  id          String   @id @default(cuid())
+  resourceId  String
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  version     String
+  fileUrl     String?
+  externalUrl String?
+  changelog   String?
+  createdAt   DateTime @default(now())
+
+  @@index([resourceId])
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
+  name        String
+  slug        String
+  description String?
+  icon        String?
+  colorAccent String?
+  sortOrder   Int        @default(0)
+  resources   Resource[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  resources ResourceTag[]
+}
+
+model ResourceTag {
+  resourceId String
+  tagId      String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([resourceId, tagId])
+}
+
+model Collection {
+  id          String               @id @default(cuid())
+  workspaceId String
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id])
+  name        String
+  description String?
+  resources   CollectionResource[]
+
+  @@index([workspaceId])
+}
+
+model CollectionResource {
+  collectionId String
+  resourceId   String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  resource     Resource   @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, resourceId])
+}
+
+model UserPreference {
+  id                    String   @id @default(cuid())
+  workspaceId           String   @unique
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activeThemeId         String   @default("soft-sakura")
+  animationEnabled      Boolean  @default(true)
+  animationIntensity    String   @default("medium") // low | medium | high
+
+  // Additional settings from PRD
+  dashboardWidgets      String   @default("{\"welcome\":true,\"statistics\":true,\"favorites\":true,\"recent\":true,\"collections\":true}")
+  gridDensity           String   @default("comfortable")
+  sidebarCollapsed      Boolean  @default(false)
+
+  searchSuggestions     Boolean  @default(true)
+  searchAutoComplete    Boolean  @default(true)
+  recentSearchEnabled   Boolean  @default(true)
+  defaultSearchCategory String?
+
+  favoriteSorting       String   @default("recent")
+  defaultCollectionId   String?
+
+  downloadFolder        String?
+  autoDownload          Boolean  @default(false)
+  downloadConfirmation  Boolean  @default(true)
+
+  imageQuality          String   @default("auto")
+  lazyLoading           Boolean  @default(true)
+
+  updatedAt             DateTime @updatedAt
+
+  @@index([workspaceId])
+}

@@ -1,0 +1,264 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════
+   PINKSPACE — Design System Tokens
+   Premium Pink / Luxury / Glassmorphism
+   ═══════════════════════════════════════════ */
+
+:root {
+  /* ── Dynamic Theme Palette Mapping ── */
+  --pink-50: var(--color-background);
+  --pink-100: var(--color-accent-2);
+  --pink-200: var(--color-border-strong);
+  --pink-300: var(--color-accent-1);
+  --pink-400: var(--color-accent-3);
+  --pink-500: var(--color-primary);
+  --pink-600: var(--color-primary-hover);
+  --pink-700: var(--color-primary-hover);
+  --pink-800: var(--color-foreground);
+  --pink-900: var(--color-foreground);
+
+  /* ── Rose Gold Gradient ── */
+  --rose-gold-start: #F6C6D8;
+  --rose-gold-end: #FDEBF3;
+
+  /* ── Ink (Text) ── */
+  --ink-900: #241522;
+  --ink-700: #3D2A38;
+  --ink-500: #6E5A68;
+  --ink-300: #A8969F;
+  --ink-100: #E5DEE2;
+
+  /* ── Glass ── */
+  --glass-white: rgba(255, 255, 255, var(--glass-opacity, 0.55));
+  --glass-white-strong: var(--color-surface);
+  --glass-border: var(--color-border);
+  --glass-shadow: var(--glass-shadow-custom, 0 8px 32px rgba(136, 60, 93, 0.08));
+
+  /* ── Luxury Gold ── */
+  --gold: #d4af37;
+  --gold-soft: #F0D78C;
+
+  /* ── Functional ── */
+  --background: var(--pink-50);
+  --foreground: var(--ink-900);
+  --surface: var(--glass-white-strong);
+  --surface-hover: rgba(255, 255, 255, 0.92);
+  --border: var(--glass-border);
+  --border-strong: rgba(255, 143, 196, 0.35);
+  --accent: var(--pink-500);
+  --accent-hover: var(--pink-700);
+
+  /* ── Sidebar ── */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+
+  /* ── Motion ── */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-pink-50: var(--pink-50);
+  --color-pink-100: var(--pink-100);
+  --color-pink-200: var(--pink-200);
+  --color-pink-300: var(--pink-300);
+  --color-pink-400: var(--pink-400);
+  --color-pink-500: var(--pink-500);
+  --color-pink-600: var(--pink-600);
+  --color-pink-700: var(--pink-700);
+  --color-pink-800: var(--pink-800);
+  --color-pink-900: var(--pink-900);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-500: var(--ink-500);
+  --color-ink-300: var(--ink-300);
+  --color-ink-100: var(--ink-100);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-glass-white: var(--glass-white);
+  --color-glass-border: var(--glass-border);
+  --color-border-strong: var(--border-strong);
+  --color-gold: var(--gold);
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Global Reset ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pink-300) transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(255, 111, 181, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(200, 150, 255, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(246, 198, 216, 0.1) 0px, transparent 50%);
+}
+
+/* ── Floating Orbs (decorative background) ── */
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  animation: floatOrb 20s ease-in-out infinite;
+}
+
+.bg-orb-1 {
+  width: 500px;
+  height: 500px;
+  background: var(--pink-400);
+  top: -150px;
+  right: -150px;
+}
+
+.bg-orb-2 {
+  width: 400px;
+  height: 400px;
+  background: #c4b5fd;
+  bottom: -100px;
+  left: -100px;
+  animation-delay: -7s;
+}
+
+.bg-orb-3 {
+  width: 300px;
+  height: 300px;
+  background: var(--rose-gold-start);
+  top: 40%;
+  left: 50%;
+  animation-delay: -14s;
+}
+
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+/* ── Card Glow Effect ── */
+.card-glow {
+  position: relative;
+  transition: all var(--duration-normal) var(--ease-smooth);
+}
+
+.card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--pink-300), var(--pink-100), var(--pink-300));
+  opacity: 0;
+  z-index: -1;
+  transition: opacity var(--duration-normal) var(--ease-smooth);
+}
+
+.card-glow:hover::before {
+  opacity: 1;
+}
+
+.card-glow:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 25px rgba(255, 111, 181, 0.15),
+    0 2px 8px rgba(136, 60, 93, 0.06);
+}
+
+/* ── Glass Card ── */
+.glass-card {
+  background: var(--glass-white-strong);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+}
+
+/* ── Floating Asset Animation ── */
+@keyframes floatAsset {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(2deg); }
+  50% { transform: translateY(-12px) rotate(0deg); }
+  75% { transform: translateY(-4px) rotate(-2deg); }
+}
+
+/* ── Shimmer Effect ── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    var(--pink-700) 0%,
+    var(--pink-400) 25%,
+    var(--gold) 50%,
+    var(--pink-400) 75%,
+    var(--pink-700) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* ── Pulse Dot ── */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34D399;
+  position: relative;
+}
+
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.3);
+  animation: pulseRing 2s ease-out infinite;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ── Favorite Heart Animation ── */
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.3); }
+  50% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.heart-pop {
+  animation: heartPop 0.35s var(--ease-smooth);
+}
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
