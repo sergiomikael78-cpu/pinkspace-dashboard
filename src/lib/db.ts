@@ -20,9 +20,17 @@ export function getPrismaClient(): PrismaClient {
         (ctx.env as any).__prismaClient = new PrismaClient({ adapter } as any);
       }
       return (ctx.env as any).__prismaClient;
+    } else {
+      console.log("Cloudflare Context found but no DB binding:", JSON.stringify(Object.keys(ctx?.env || {})));
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(`DB binding not found in Cloudflare Context. Available env keys: ${Object.keys(ctx?.env || {}).join(", ")}`);
+      }
     }
-  } catch (_e) {
-    // getCloudflareContext is not available
+  } catch (e: any) {
+    console.error("getCloudflareContext error:", e);
+    if (process.env.NODE_ENV === "production" && !globalForPrisma.prisma) {
+       throw new Error("Failed to initialize Prisma on Cloudflare: " + e.message);
+    }
   }
 
   if (globalForPrisma.prisma) {
