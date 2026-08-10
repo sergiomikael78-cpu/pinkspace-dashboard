@@ -38,6 +38,13 @@ export default function ResourceCard({ resource, onPreview }: ResourceCardProps)
     if (resource.sourceType === "FILE" && resource.fileUrl) {
       try {
         const url = storage.getDownloadUrl(resource.fileUrl);
+        
+        // Allow Tampermonkey to intercept userscripts
+        if (resource.fileUrl.endsWith('.user.js')) {
+          window.open(url, "_blank");
+          return;
+        }
+
         // Fetch the file to force download as blob
         const response = await fetch(url);
         if (!response.ok) throw new Error("Network response was not ok");
