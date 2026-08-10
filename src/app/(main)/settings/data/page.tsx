@@ -21,13 +21,18 @@ export default function DataManagementSettings() {
         ],
       };
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(mockData, null, 2));
+      const jsonStr = JSON.stringify(mockData, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const blobUrl = URL.createObjectURL(blob);
+      
       const downloadAnchor = document.createElement("a");
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `pinkspace_backup_${Date.now()}.json`);
+      downloadAnchor.href = blobUrl;
+      downloadAnchor.download = `pinkspace_backup_${Date.now()}.json`;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
-      downloadAnchor.remove();
+      document.body.removeChild(downloadAnchor);
+      
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
       setExporting(false);
     }, 500);
   };

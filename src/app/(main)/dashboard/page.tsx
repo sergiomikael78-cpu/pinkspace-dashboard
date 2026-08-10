@@ -1,29 +1,40 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { resource } from "@/lib/schema";
+import { desc, count } from "drizzle-orm";
 import ResourceCard from "@/components/ResourceCardClientWrapper";
 import { Activity, Clock, Download, ArrowRight, FolderOpen, Star } from "lucide-react";
 import { CATEGORIES } from "@/config/categories";
 
 export default async function DashboardPage() {
-  const recentResources = await prisma.resource.findMany({
-    take: 4,
-    orderBy: { createdAt: "desc" },
-    include: {
+  const recentResources = await db.query.resource.findMany({
+    limit: 4,
+    orderBy: [desc(resource.createdAt)],
+    with: {
       category: true,
-      tags: { include: { tag: true } },
+      tags: {
+        with: {
+          tag: true,
+        },
+      },
     },
   });
 
-  const popularResources = await prisma.resource.findMany({
-    take: 3,
-    orderBy: { downloadCount: "desc" },
-    include: {
+  const popularResources = await db.query.resource.findMany({
+    limit: 3,
+    orderBy: [desc(resource.downloadCount)],
+    with: {
       category: true,
-      tags: { include: { tag: true } },
+      tags: {
+        with: {
+          tag: true,
+        },
+      },
     },
   });
 
-  const totalResources = await prisma.resource.count();
+  const countResult = await db.select({ value: count() }).from(resource);
+  const totalResources = countResult[0]?.value || 0;
   const totalCategories = CATEGORIES.length;
 
   return (

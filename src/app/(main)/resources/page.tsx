@@ -1,25 +1,31 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { category, resource } from "@/lib/schema";
+import { asc, eq } from "drizzle-orm";
 import ResourceCard from "@/components/ResourceCardClientWrapper";
 import Link from "next/link";
 import { FolderOpen } from "lucide-react";
 import { CATEGORIES } from "@/config/categories";
 
 export default async function ResourcesPage() {
-  const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
+  const categories = await db.query.category.findMany({
+    orderBy: [asc(category.sortOrder)],
   });
 
   const resourcesByCategory = await Promise.all(
-    categories.map(async (category) => {
-      const resources = await prisma.resource.findMany({
-        where: { categoryId: category.id },
-        include: {
+    categories.map(async (cat) => {
+      const resources = await db.query.resource.findMany({
+        where: eq(resource.categoryId, cat.id),
+        orderBy: [asc(resource.title)],
+        with: {
           category: true,
-          tags: { include: { tag: true } },
+          tags: {
+            with: {
+              tag: true,
+            },
+          },
         },
-        orderBy: { title: "asc" },
       });
-      return { category, resources };
+      return { category: cat, resources };
     })
   );
 

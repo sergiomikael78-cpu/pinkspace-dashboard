@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { category as categoryTable, resource as resourceTable } from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import ResourceCard from "@/components/ResourceCardClientWrapper";
 import { notFound } from "next/navigation";
 import { CATEGORIES } from "@/config/categories";
@@ -13,21 +15,25 @@ export default async function CategoryPage({
   const resolvedParams = await params;
   const categorySlug = resolvedParams.category;
 
-  const category = await prisma.category.findFirst({
-    where: { slug: categorySlug },
+  const category = await db.query.category.findFirst({
+    where: eq(categoryTable.slug, categorySlug),
   });
 
   if (!category) {
     notFound();
   }
 
-  const resources = await prisma.resource.findMany({
-    where: { categoryId: category.id },
-    include: {
+  const resources = await db.query.resource.findMany({
+    where: eq(resourceTable.categoryId, category.id),
+    orderBy: [asc(resourceTable.title)],
+    with: {
       category: true,
-      tags: { include: { tag: true } },
+      tags: {
+        with: {
+          tag: true,
+        },
+      },
     },
-    orderBy: { title: "asc" },
   });
 
   const configCat = CATEGORIES.find(c => c.slug === category.slug);

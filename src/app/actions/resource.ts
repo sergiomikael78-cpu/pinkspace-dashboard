@@ -1,6 +1,8 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { category as categoryTable, resource as resourceTable, tag as tagTable, resourceTag as resourceTagTable } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { uploadFileLocal, deleteFileLocal } from "@/lib/storage-server";
 import { revalidatePath } from "next/cache";
 
@@ -19,7 +21,9 @@ export async function createResource(formData: FormData) {
     const file = formData.get("file") as File | null;
     let fileUrl = null;
 
-    const category = await prisma.category.findUnique({ where: { id: categoryId } });
+    const category = await db.query.category.findFirst({
+      where: eq(categoryTable.id, categoryId),
+    });
     if (!category) throw new Error("Category not found");
 
     if (sourceType === "FILE" && file && file.size > 0) {
@@ -27,39 +31,52 @@ export async function createResource(formData: FormData) {
     }
 
     // Process Tags
-    const tags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
+    const tags = tagsInput ? tagsInput.split(",").map(t => t.trim()).filter(Boolean) : [];
 
-    // Create resource
-    const resource = await prisma.resource.create({
-      data: {
-        title,
-        description,
-        categoryId,
-        sourceType,
-        fileUrl,
-        externalUrl: sourceType === "LINK" ? externalUrl : null,
-        iconEmoji: iconEmoji || "📦",
-        currentVersion,
-        workspaceId: "default-workspace", // Using the single workspace ID seeded in DB
-        tags: {
-          create: tags.map(tag => ({
-            tag: {
-              connectOrCreate: {
-                where: { name: tag },
-                create: { name: tag }
-              }
-            }
-          }))
-        }
-      }
+    const newResourceId = crypto.randomUUID();
+
+    // Insert resource
+    await db.insert(resourceTable).values({
+      id: newResourceId,
+      title,
+      description,
+      categoryId,
+      sourceType,
+      fileUrl,
+      externalUrl: sourceType === "LINK" ? externalUrl : null,
+      iconEmoji: iconEmoji || "📦",
+      currentVersion,
+      workspaceId: "default-workspace",
     });
+
+    // Connect/Create tags
+    for (const tagName of tags) {
+      let tagObj = await db.query.tag.findFirst({
+        where: eq(tagTable.name, tagName),
+      });
+
+      if (!tagObj) {
+        const tagId = crypto.randomUUID();
+        await db.insert(tagTable).values({ id: tagId, name: tagName }).onConflictDoNothing();
+        tagObj = await db.query.tag.findFirst({
+          where: eq(tagTable.name, tagName),
+        });
+      }
+
+      if (tagObj) {
+        await db.insert(resourceTagTable).values({
+          resourceId: newResourceId,
+          tagId: tagObj.id,
+        }).onConflictDoNothing();
+      }
+    }
 
     revalidatePath("/admin");
     revalidatePath("/dashboard");
     revalidatePath("/resources");
     revalidatePath(`/resources/${category.slug}`);
 
-    return { success: true, id: resource.id };
+    return { success: true, id: newResourceId };
   } catch (error: any) {
     console.error("Failed to create resource:", error);
     return { success: false, error: error.message };
@@ -68,17 +85,18 @@ export async function createResource(formData: FormData) {
 
 export async function deleteResource(id: string) {
   try {
-    const resource = await prisma.resource.findUnique({ where: { id } });
-    if (!resource) throw new Error("Resource not found");
+    const res = await db.query.resource.findFirst({
+      where: eq(resourceTable.id, id),
+    });
+    if (!res) throw new Error("Resource not found");
 
     // Delete associated file if it exists
-    if (resource.sourceType === "FILE" && resource.fileUrl) {
-      await deleteFileLocal(resource.fileUrl);
+    if (res.sourceType === "FILE" && res.fileUrl) {
+      await deleteFileLocal(res.fileUrl);
     }
 
-    // Delete from DB (Prisma cascading will handle tags mapping if configured, 
-    // but ResourceTag has onDelete: Cascade already)
-    await prisma.resource.delete({ where: { id } });
+    // Delete from DB
+    await db.delete(resourceTable).where(eq(resourceTable.id, id));
 
     revalidatePath("/admin");
     revalidatePath("/dashboard");

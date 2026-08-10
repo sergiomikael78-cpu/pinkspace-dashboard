@@ -87,15 +87,36 @@ export default function PreviewModal({ isOpen, onClose, resource }: PreviewModal
   const isImageFile = resource.fileUrl?.match(/\.(png|jpe?g|svg)$/i);
   const isZipFile = resource.fileUrl?.endsWith(".zip");
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (resource.sourceType === "FILE" && resource.fileUrl) {
-      const url = storage.getDownloadUrl(resource.fileUrl);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = resource.fileUrl.split("/").pop() || "download";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const url = storage.getDownloadUrl(resource.fileUrl);
+        // Fetch the file to force download as blob
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Network response was not ok");
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = resource.fileUrl.split("/").pop() || "download";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+      } catch (error) {
+        console.error("Download failed, falling back to open:", error);
+        const fallbackUrl = storage.getDownloadUrl(resource.fileUrl);
+        const link = document.createElement("a");
+        link.href = fallbackUrl;
+        link.download = resource.fileUrl.split("/").pop() || "download";
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } else if (resource.sourceType === "LINK" && resource.externalUrl) {
       window.open(resource.externalUrl, "_blank", "noopener,noreferrer");
     }

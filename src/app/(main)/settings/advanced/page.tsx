@@ -65,7 +65,7 @@ export default function AdvancedSettings() {
         </SettingItem>
 
         <SettingItem
-          title="Log Waktu Eksekusi Kueri Prisma"
+          title="Log Waktu Eksekusi Kueri Drizzle"
           description="Tampilkan waktu respon kueri database SQLite/Postgres pada terminal server."
         >
           <label className="relative inline-flex items-center cursor-pointer">

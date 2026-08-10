@@ -1,12 +1,14 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { category } from "@/lib/schema";
+import { asc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, PlusCircle } from "lucide-react";
 import CreateForm from "./CreateForm";
 import UploadHelpModal from "./UploadHelpModal";
 
 export default async function CreateResourcePage() {
-  const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
+  const categories = await db.query.category.findMany({
+    orderBy: [asc(category.sortOrder)],
   });
 
   return (

@@ -79,7 +79,7 @@ export default function Home() {
             </div>
             <div>
               <h3 className="font-bold text-ink-900 mb-1">Future Proof</h3>
-              <p className="text-sm text-ink-500">Built on Next.js 15, Prisma, and flexible storage abstractions.</p>
+              <p className="text-sm text-ink-500">Built on Next.js 15, Drizzle ORM, and Cloudflare D1.</p>
             </div>
           </div>
         </div>

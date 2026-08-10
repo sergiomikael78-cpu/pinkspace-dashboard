@@ -1,4 +1,6 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { category as categoryTable, resource as resourceTable } from "@/lib/schema";
+import { eq, asc } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowLeft, Edit2 } from "lucide-react";
 import EditForm from "./EditForm";
@@ -12,13 +14,19 @@ export default async function EditResourcePage({
   const resolvedParams = await params;
   const id = resolvedParams.id;
 
-  const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
+  const categories = await db.query.category.findMany({
+    orderBy: [asc(categoryTable.sortOrder)],
   });
 
-  const resource = await prisma.resource.findUnique({
-    where: { id },
-    include: { tags: { include: { tag: true } } },
+  const resource = await db.query.resource.findFirst({
+    where: eq(resourceTable.id, id),
+    with: {
+      tags: {
+        with: {
+          tag: true,
+        },
+      },
+    },
   });
 
   if (!resource) {
@@ -28,7 +36,7 @@ export default async function EditResourcePage({
   // Transform resource into a flat structure for the form
   const flatResource = {
     ...resource,
-    tags: resource.tags.map(t => t.tag.name).join(", "),
+    tags: resource.tags ? resource.tags.map(t => t.tag.name).join(", ") : "",
   };
 
   return (

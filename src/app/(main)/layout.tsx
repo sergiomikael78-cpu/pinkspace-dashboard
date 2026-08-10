@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Sidebar from "@/components/Sidebar";
 import SearchPalette from "@/components/SearchPalette";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { SEED_RESOURCES } from "@/config/seed-data";
 
 export default async function MainLayout({
@@ -10,39 +10,31 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch categories with resource counts (D1 Driver Adapter Compatible)
-  const categories = await prisma.category.findMany({
-    include: {
-      _count: {
-        select: { resources: true },
-      },
+  // Fetch categories with resources to count
+  const categories = await db.query.category.findMany({
+    with: {
+      resources: true,
     },
   });
   
   // Transform to { slug: count }
   const resourceCounts: Record<string, number> = {};
   categories.forEach((cat) => {
-    resourceCounts[cat.slug] = cat._count.resources;
+    resourceCounts[cat.slug] = cat.resources ? cat.resources.length : 0;
   });
 
   // Prepare searchable resources
-  const searchResources = await prisma.resource.findMany({
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      iconEmoji: true,
-      category: {
-        select: { slug: true }
-      }
-    }
+  const searchResources = await db.query.resource.findMany({
+    with: {
+      category: true,
+    },
   });
 
   const formattedSearchResources = searchResources.map(r => ({
     id: r.id,
     title: r.title,
     description: r.description,
-    categorySlug: r.category.slug,
+    categorySlug: r.category ? r.category.slug : "",
     iconEmoji: r.iconEmoji || "📦"
   }));
 

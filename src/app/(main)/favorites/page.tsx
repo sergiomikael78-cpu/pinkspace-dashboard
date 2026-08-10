@@ -1,15 +1,21 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { resource } from "@/lib/schema";
+import { eq, desc } from "drizzle-orm";
 import ResourceCard from "@/components/ResourceCardClientWrapper";
 import { HeartCrack, Heart } from "lucide-react";
 
 export default async function FavoritesPage() {
-  const favoriteResources = await prisma.resource.findMany({
-    where: { isFavorite: true },
-    include: {
+  const favoriteResources = await db.query.resource.findMany({
+    where: eq(resource.isFavorite, true),
+    orderBy: [desc(resource.updatedAt)],
+    with: {
       category: true,
-      tags: { include: { tag: true } },
+      tags: {
+        with: {
+          tag: true,
+        },
+      },
     },
-    orderBy: { updatedAt: "desc" },
   });
 
   return (

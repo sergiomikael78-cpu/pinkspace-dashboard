@@ -1,15 +1,17 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { resource } from "@/lib/schema";
+import { desc } from "drizzle-orm";
 import Link from "next/link";
 import { Plus, Edit2, Trash2, ShieldAlert } from "lucide-react";
 import DeleteButton from "./DeleteButton"; // We'll create this client component next
 import LogoutButton from "./LogoutButton";
 
 export default async function AdminPage() {
-  const resources = await prisma.resource.findMany({
-    include: {
+  const resources = await db.query.resource.findMany({
+    with: {
       category: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [desc(resource.createdAt)],
   });
 
   return (

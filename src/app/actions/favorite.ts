@@ -1,14 +1,15 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
+import { resource as resourceTable } from "@/lib/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function toggleFavoriteAction(resourceId: string, isFavorite: boolean) {
   try {
-    await prisma.resource.update({
-      where: { id: resourceId },
-      data: { isFavorite },
-    });
+    await db.update(resourceTable)
+      .set({ isFavorite, updatedAt: new Date() })
+      .where(eq(resourceTable.id, resourceId));
     
     // Revalidate the main layout or specific paths so that lists update
     revalidatePath("/", "layout");
