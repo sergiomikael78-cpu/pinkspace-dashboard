@@ -25,7 +25,24 @@ export function getDb() {
     if (process.env.DATABASE_URL) {
       relativeDbPath = process.env.DATABASE_URL.replace("file:", "").replace(/^\.\//, "");
     }
-    const finalPath = path.resolve(process.cwd(), relativeDbPath);
+    let finalPath = path.resolve(process.cwd(), relativeDbPath);
+
+    // If running on Vercel / serverless environment, copy db to writable /tmp
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      try {
+        const fs = require("fs");
+        const tmpDbPath = path.join("/tmp", "dev.db");
+        if (!fs.existsSync(tmpDbPath) && fs.existsSync(finalPath)) {
+          fs.copyFileSync(finalPath, tmpDbPath);
+        }
+        if (fs.existsSync(tmpDbPath)) {
+          finalPath = tmpDbPath;
+        }
+      } catch (err) {
+        console.error("Error setting up writable /tmp database for Vercel:", err);
+      }
+    }
+
     const sqlite = new Database(finalPath);
     localDbInstance = drizzleSqlite(sqlite, { schema });
   }

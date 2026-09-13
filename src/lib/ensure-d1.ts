@@ -155,9 +155,35 @@ export async function ensureD1DatabaseReady() {
         ).run().catch(() => {});
       }
 
+      // 3. Seed all 24 resources (Chrome Extension 6, Script 10, Assets 8) into D1
+      const { SEED_RESOURCES } = await import("@/config/seed-data");
+      const categoryMap = new Map<string, string>();
+      for (const cat of CATEGORIES) {
+        categoryMap.set(cat.slug, cat.id);
+      }
+
+      for (const res of SEED_RESOURCES) {
+        const catId = categoryMap.get(res.categorySlug) || "cat-" + res.categorySlug;
+        const resId = "res-" + res.title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30);
+        await ctx.env.DB.prepare(`
+          INSERT OR IGNORE INTO Resource (id, workspaceId, title, description, sourceType, fileUrl, provider, categoryId, iconEmoji, currentVersion, isFavorite, openCount, downloadCount, createdAt, updatedAt)
+          VALUES (?, 'default-workspace', ?, ?, ?, ?, 'manual', ?, ?, ?, 0, 0, 0, unixepoch() * 1000, unixepoch() * 1000)
+        `).bind(
+          resId,
+          res.title,
+          res.description,
+          res.sourceType,
+          res.fileUrl,
+          catId,
+          res.iconEmoji || "📦",
+          res.currentVersion || "1.0.0"
+        ).run().catch(() => {});
+      }
+
       isD1Initialized = true;
     }
   } catch (error) {
     console.error("Failed to auto-initialize Cloudflare D1 tables:", error);
   }
 }
+
