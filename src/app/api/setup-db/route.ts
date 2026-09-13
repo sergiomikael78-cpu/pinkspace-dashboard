@@ -17,75 +17,30 @@ export async function GET() {
 
     const db = ctx.env.DB;
 
-    // 1. Ensure tables exist
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS Workspace (
-        id text PRIMARY KEY NOT NULL,
-        name text NOT NULL,
-        ownerId text,
-        createdAt integer DEFAULT (unixepoch() * 1000) NOT NULL
-      );
-      INSERT OR IGNORE INTO Workspace (id, name) VALUES ('default-workspace', 'My Workspace');
+    // 1. Execute each DDL statement individually with prepare().run() to avoid parser errors
+    const tables = [
+      "CREATE TABLE IF NOT EXISTS Workspace (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, ownerId TEXT, createdAt INTEGER DEFAULT 0 NOT NULL);",
+      "INSERT OR IGNORE INTO Workspace (id, name) VALUES ('default-workspace', 'My Workspace');",
+      "CREATE TABLE IF NOT EXISTS Category (id TEXT PRIMARY KEY NOT NULL, workspaceId TEXT NOT NULL, name TEXT NOT NULL, slug TEXT NOT NULL, description TEXT, icon TEXT, colorAccent TEXT, sortOrder INTEGER DEFAULT 0 NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS Resource (id TEXT PRIMARY KEY NOT NULL, workspaceId TEXT NOT NULL, title TEXT NOT NULL, description TEXT NOT NULL, sourceType TEXT NOT NULL, fileUrl TEXT, externalUrl TEXT, provider TEXT, categoryId TEXT NOT NULL, thumbnailUrl TEXT, iconEmoji TEXT, currentVersion TEXT DEFAULT '1.0.0' NOT NULL, isFavorite INTEGER DEFAULT 0 NOT NULL, openCount INTEGER DEFAULT 0 NOT NULL, downloadCount INTEGER DEFAULT 0 NOT NULL, lastOpenedAt INTEGER, createdAt INTEGER DEFAULT 0 NOT NULL, updatedAt INTEGER DEFAULT 0 NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS LivechatTemplate (id TEXT PRIMARY KEY NOT NULL, workspaceId TEXT NOT NULL, title TEXT NOT NULL, kodePk TEXT NOT NULL, content TEXT NOT NULL, categoryTag TEXT DEFAULT 'Umum', isFavorite INTEGER DEFAULT 0 NOT NULL, usageCount INTEGER DEFAULT 0 NOT NULL, sortOrder INTEGER DEFAULT 0 NOT NULL, createdAt INTEGER DEFAULT 0 NOT NULL, updatedAt INTEGER DEFAULT 0 NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS Tag (id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS ResourceTag (resourceId TEXT NOT NULL, tagId TEXT NOT NULL, PRIMARY KEY(resourceId, tagId));",
+      "CREATE TABLE IF NOT EXISTS ResourceVersion (id TEXT PRIMARY KEY NOT NULL, resourceId TEXT NOT NULL, version TEXT NOT NULL, fileUrl TEXT, externalUrl TEXT, changelog TEXT, createdAt INTEGER DEFAULT 0 NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS Collection (id TEXT PRIMARY KEY NOT NULL, workspaceId TEXT NOT NULL, name TEXT NOT NULL, description TEXT);",
+      "CREATE TABLE IF NOT EXISTS CollectionResource (collectionId TEXT NOT NULL, resourceId TEXT NOT NULL, PRIMARY KEY(collectionId, resourceId));",
+      "CREATE TABLE IF NOT EXISTS UserPreference (id TEXT PRIMARY KEY NOT NULL, workspaceId TEXT NOT NULL, activeThemeId TEXT DEFAULT 'soft-sakura' NOT NULL, animationEnabled INTEGER DEFAULT 1 NOT NULL, animationIntensity TEXT DEFAULT 'medium' NOT NULL, dashboardWidgets TEXT DEFAULT '{\"welcome\":true}' NOT NULL, gridDensity TEXT DEFAULT 'comfortable' NOT NULL, sidebarCollapsed INTEGER DEFAULT 0 NOT NULL, searchSuggestions INTEGER DEFAULT 1 NOT NULL, searchAutoComplete INTEGER DEFAULT 1 NOT NULL, recentSearchEnabled INTEGER DEFAULT 1 NOT NULL, defaultSearchCategory TEXT, favoriteSorting TEXT DEFAULT 'recent' NOT NULL, defaultCollectionId TEXT, downloadFolder TEXT, autoDownload INTEGER DEFAULT 0 NOT NULL, downloadConfirmation INTEGER DEFAULT 1 NOT NULL, imageQuality TEXT DEFAULT 'auto' NOT NULL, lazyLoading INTEGER DEFAULT 1 NOT NULL, updatedAt INTEGER DEFAULT 0 NOT NULL);"
+    ];
 
-      CREATE TABLE IF NOT EXISTS Category (
-        id text PRIMARY KEY NOT NULL,
-        workspaceId text NOT NULL,
-        name text NOT NULL,
-        slug text NOT NULL,
-        description text,
-        icon text,
-        colorAccent text,
-        sortOrder integer DEFAULT 0 NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS category_workspaceId_idx ON Category (workspaceId);
-      CREATE UNIQUE INDEX IF NOT EXISTS category_workspaceId_slug_idx ON Category (workspaceId, slug);
+    for (const sql of tables) {
+      await db.prepare(sql).run();
+    }
 
-      CREATE TABLE IF NOT EXISTS Resource (
-        id text PRIMARY KEY NOT NULL,
-        workspaceId text NOT NULL,
-        title text NOT NULL,
-        description text NOT NULL,
-        sourceType text NOT NULL,
-        fileUrl text,
-        externalUrl text,
-        provider text,
-        categoryId text NOT NULL,
-        thumbnailUrl text,
-        iconEmoji text,
-        currentVersion text DEFAULT '1.0.0' NOT NULL,
-        isFavorite integer DEFAULT 0 NOT NULL,
-        openCount integer DEFAULT 0 NOT NULL,
-        downloadCount integer DEFAULT 0 NOT NULL,
-        lastOpenedAt integer,
-        createdAt integer DEFAULT (unixepoch() * 1000) NOT NULL,
-        updatedAt integer DEFAULT (unixepoch() * 1000) NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS resource_workspaceId_idx ON Resource (workspaceId);
-      CREATE INDEX IF NOT EXISTS resource_categoryId_idx ON Resource (categoryId);
-
-      CREATE TABLE IF NOT EXISTS LivechatTemplate (
-        id text PRIMARY KEY NOT NULL,
-        workspaceId text NOT NULL,
-        title text NOT NULL,
-        kodePk text NOT NULL,
-        content text NOT NULL,
-        categoryTag text DEFAULT 'Umum',
-        isFavorite integer DEFAULT 0 NOT NULL,
-        usageCount integer DEFAULT 0 NOT NULL,
-        sortOrder integer DEFAULT 0 NOT NULL,
-        createdAt integer DEFAULT (unixepoch() * 1000) NOT NULL,
-        updatedAt integer DEFAULT (unixepoch() * 1000) NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS livechatTemplate_workspaceId_idx ON LivechatTemplate (workspaceId);
-      CREATE INDEX IF NOT EXISTS livechatTemplate_kodePk_idx ON LivechatTemplate (kodePk);
-    `);
-
-    // 2. Insert categories
+    // 2. Insert all categories
     for (const cat of CATEGORIES) {
-      await db.prepare(`
-        INSERT OR IGNORE INTO Category (id, workspaceId, name, slug, description, icon, colorAccent, sortOrder)
-        VALUES (?, 'default-workspace', ?, ?, ?, ?, ?, ?)
-      `).bind(
+      await db.prepare(
+        "INSERT OR IGNORE INTO Category (id, workspaceId, name, slug, description, icon, colorAccent, sortOrder) VALUES (?, 'default-workspace', ?, ?, ?, ?, ?, ?)"
+      ).bind(
         cat.id,
         cat.displayName,
         cat.slug,
@@ -96,39 +51,27 @@ export async function GET() {
       ).run();
     }
 
-    // 3. Insert all 24 resources
+    // 3. Insert all 24 resources (Chrome Extension 6, Script 10, Assets 8)
     const categoryMap = new Map<string, string>();
     for (const cat of CATEGORIES) {
       categoryMap.set(cat.slug, cat.id);
     }
 
-    let insertedResources = 0;
-    const errors: string[] = [];
-
     for (const res of SEED_RESOURCES) {
       const catId = categoryMap.get(res.categorySlug) || "cat-" + res.categorySlug;
       const resId = "res-" + res.title.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30);
-      try {
-        await db.prepare(`
-          INSERT OR IGNORE INTO Resource (
-            id, workspaceId, title, description, sourceType, fileUrl, provider, categoryId, iconEmoji, currentVersion, isFavorite, openCount, downloadCount, createdAt, updatedAt
-          ) VALUES (
-            ?, 'default-workspace', ?, ?, ?, ?, 'manual', ?, ?, ?, 0, 0, 0, unixepoch() * 1000, unixepoch() * 1000
-          )
-        `).bind(
-          resId,
-          res.title,
-          res.description,
-          res.sourceType,
-          res.fileUrl,
-          catId,
-          res.iconEmoji || "📦",
-          res.currentVersion || "1.0.0"
-        ).run();
-        insertedResources++;
-      } catch (e: any) {
-        errors.push(`${res.title}: ${e.message}`);
-      }
+      await db.prepare(
+        "INSERT OR IGNORE INTO Resource (id, workspaceId, title, description, sourceType, fileUrl, provider, categoryId, iconEmoji, currentVersion, isFavorite, openCount, downloadCount, createdAt, updatedAt) VALUES (?, 'default-workspace', ?, ?, ?, ?, 'manual', ?, ?, ?, 0, 0, 0, unixepoch() * 1000, unixepoch() * 1000)"
+      ).bind(
+        resId,
+        res.title,
+        res.description,
+        res.sourceType,
+        res.fileUrl,
+        catId,
+        res.iconEmoji || "📦",
+        res.currentVersion || "1.0.0"
+      ).run();
     }
 
     // 4. Seed Livechat Templates
@@ -142,13 +85,9 @@ export async function GET() {
     ];
 
     for (const st of sampleTemplates) {
-      await db.prepare(`
-        INSERT OR IGNORE INTO LivechatTemplate (
-          id, workspaceId, title, kodePk, content, categoryTag, isFavorite, usageCount, sortOrder, createdAt, updatedAt
-        ) VALUES (
-          ?, 'default-workspace', ?, ?, ?, ?, ?, ?, 0, unixepoch() * 1000, unixepoch() * 1000
-        )
-      `).bind(st.id, st.title, st.kodePk, st.text, st.tag, st.isFav, st.count).run();
+      await db.prepare(
+        "INSERT OR IGNORE INTO LivechatTemplate (id, workspaceId, title, kodePk, content, categoryTag, isFavorite, usageCount, sortOrder, createdAt, updatedAt) VALUES (?, 'default-workspace', ?, ?, ?, ?, ?, ?, 0, unixepoch() * 1000, unixepoch() * 1000)"
+      ).bind(st.id, st.title, st.kodePk, st.text, st.tag, st.isFav, st.count).run();
     }
 
     // Check counts
@@ -160,7 +99,6 @@ export async function GET() {
       message: "Cloudflare D1 database fully populated!",
       totalResourcesInD1: resCount?.total || 0,
       totalLivechatTemplatesInD1: tmplCount?.total || 0,
-      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error: any) {
     return NextResponse.json(
