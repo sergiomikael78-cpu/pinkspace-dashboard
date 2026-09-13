@@ -47,9 +47,12 @@ export default async function DashboardPage() {
         <div className="relative z-10 text-white max-w-2xl">
           <h2 className="text-3xl font-extrabold mb-2 tracking-tight">Welcome back to Pinkspace</h2>
           <p className="text-pink-100 mb-6 font-medium">Your personal developer command center is ready.</p>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-3">
             <Link href="/resources" className="bg-white text-pink-600 px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-pink-50 transition-colors inline-flex items-center gap-2">
               <FolderOpen size={18} /> Browse Resources
+            </Link>
+            <Link href="/resources/template-livechat" className="bg-pink-700/30 hover:bg-pink-700/40 text-white border border-white/30 px-5 py-2.5 rounded-xl font-bold shadow-sm transition-colors inline-flex items-center gap-2 backdrop-blur-xs">
+              <span>💬</span> Template Livechat
             </Link>
           </div>
         </div>

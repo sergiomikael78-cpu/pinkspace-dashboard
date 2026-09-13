@@ -137,10 +137,10 @@ export default function Sidebar({ resourceCounts = {} }: SidebarProps) {
                   className="overflow-hidden space-y-0.5"
                 >
                   {CATEGORIES.map((cat: CategoryConfig) => {
-                    const active = isActivePrefix(`/resources/${cat.slug}`);
+                    const active = isActivePrefix(`/resources/${cat.slug}`) || (cat.slug === "template-livechat" && isActive("/template-livechat"));
                     const count = resourceCounts[cat.slug] || 0;
 
-                    if (count === 0) return null;
+                    if (count === 0 && cat.slug !== "template-livechat") return null;
 
                     return (
                       <Link
@@ -154,11 +154,11 @@ export default function Sidebar({ resourceCounts = {} }: SidebarProps) {
                       >
                         <span className="text-sm">{cat.icon}</span>
                         <span className="flex-1 truncate">{cat.displayName}</span>
-                        {count > 0 && (
-                          <span className="text-[11px] text-ink-300 bg-pink-50 px-1.5 py-0.5 rounded-full">
-                            {count}
-                          </span>
-                        )}
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                          active ? "bg-pink-200/60 text-pink-800 font-semibold" : "text-ink-300 bg-pink-50"
+                        }`}>
+                          {count}
+                        </span>
                       </Link>
                     );
                   })}

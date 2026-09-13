@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
-import { category as categoryTable, resource as resourceTable } from "@/lib/schema";
-import { eq, asc } from "drizzle-orm";
+import { category as categoryTable, resource as resourceTable, livechatTemplate as livechatTemplateTable } from "@/lib/schema";
+import { eq, asc, desc } from "drizzle-orm";
 import ResourceCard from "@/components/ResourceCardClientWrapper";
+import LivechatTemplateManager from "@/components/LivechatTemplateManager";
 import { notFound } from "next/navigation";
 import { CATEGORIES } from "@/config/categories";
 import Link from "next/link";
@@ -14,6 +15,29 @@ export default async function CategoryPage({
 }) {
   const resolvedParams = await params;
   const categorySlug = resolvedParams.category;
+
+  // If this is the Template Livechat CS category, render dedicated manager
+  if (categorySlug === "template-livechat") {
+    const livechatTemplates = await db.query.livechatTemplate.findMany({
+      orderBy: [
+        desc(livechatTemplateTable.isFavorite),
+        asc(livechatTemplateTable.sortOrder),
+        desc(livechatTemplateTable.createdAt),
+      ],
+    });
+
+    return (
+      <div className="animate-in fade-in duration-300">
+        <Link
+          href="/resources"
+          className="inline-flex items-center gap-2 text-sm font-medium text-ink-400 hover:text-pink-500 transition-colors mb-4"
+        >
+          <ArrowLeft size={16} /> Kembali ke Semua Resource
+        </Link>
+        <LivechatTemplateManager initialTemplates={livechatTemplates} />
+      </div>
+    );
+  }
 
   const category = await db.query.category.findFirst({
     where: eq(categoryTable.slug, categorySlug),

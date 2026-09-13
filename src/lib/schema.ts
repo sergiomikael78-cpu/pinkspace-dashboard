@@ -12,6 +12,7 @@ export const workspaceRelations = relations(workspace, ({ many, one }) => ({
   resources: many(resource),
   categories: many(category),
   collections: many(collection),
+  livechatTemplates: many(livechatTemplate),
   userPreference: one(userPreference, {
     fields: [workspace.id],
     references: [userPreference.workspaceId],
@@ -209,6 +210,34 @@ export const userPreferenceRelations = relations(userPreference, ({ one }) => ({
   }),
 }));
 
+export const livechatTemplate = sqliteTable(
+  "LivechatTemplate",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspaceId").notNull().references(() => workspace.id),
+    title: text("title").notNull(),
+    kodePk: text("kodePk").notNull(),
+    content: text("content").notNull(),
+    categoryTag: text("categoryTag").default("Umum"),
+    isFavorite: integer("isFavorite", { mode: "boolean" }).notNull().default(false),
+    usageCount: integer("usageCount").notNull().default(0),
+    sortOrder: integer("sortOrder").notNull().default(0),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch() * 1000)`),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [
+    index("livechatTemplate_workspaceId_idx").on(t.workspaceId),
+    index("livechatTemplate_kodePk_idx").on(t.kodePk),
+  ]
+);
+
+export const livechatTemplateRelations = relations(livechatTemplate, ({ one }) => ({
+  workspace: one(workspace, {
+    fields: [livechatTemplate.workspaceId],
+    references: [workspace.id],
+  }),
+}));
+
 // Infer types
 export type Workspace = typeof workspace.$inferSelect;
 export type Resource = typeof resource.$inferSelect;
@@ -216,3 +245,6 @@ export type Category = typeof category.$inferSelect;
 export type Tag = typeof tag.$inferSelect;
 export type Collection = typeof collection.$inferSelect;
 export type UserPreference = typeof userPreference.$inferSelect;
+export type LivechatTemplate = typeof livechatTemplate.$inferSelect;
+export type NewLivechatTemplate = typeof livechatTemplate.$inferInsert;
+

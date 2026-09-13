@@ -94,6 +94,10 @@ async function main() {
     console.log(`  📦 Resource: ${res.iconEmoji} ${res.title}`);
   }
 
+  // 4. Initialize and seed Livechat templates
+  const { initLivechatTableAndSeed } = await import("./migrate-livechat");
+  await initLivechatTableAndSeed();
+
   console.log("\n🎉 Seeding complete!");
 }
 

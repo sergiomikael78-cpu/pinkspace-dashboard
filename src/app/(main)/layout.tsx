@@ -23,6 +23,10 @@ export default async function MainLayout({
     resourceCounts[cat.slug] = cat.resources ? cat.resources.length : 0;
   });
 
+  // Fetch livechat templates count and add to search
+  const livechatTemplates = await db.query.livechatTemplate.findMany();
+  resourceCounts["template-livechat"] = livechatTemplates.length;
+
   // Prepare searchable resources
   const searchResources = await db.query.resource.findMany({
     with: {
@@ -37,6 +41,16 @@ export default async function MainLayout({
     categorySlug: r.category ? r.category.slug : "",
     iconEmoji: r.iconEmoji || "📦"
   }));
+
+  livechatTemplates.forEach((lt) => {
+    formattedSearchResources.push({
+      id: lt.id,
+      title: `[${lt.kodePk}] ${lt.title}`,
+      description: lt.content,
+      categorySlug: "template-livechat",
+      iconEmoji: "💬",
+    });
+  });
 
   return (
     <div className="flex min-h-screen bg-transparent">

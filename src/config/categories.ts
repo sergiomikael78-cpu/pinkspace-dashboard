@@ -20,6 +20,16 @@ export interface CategoryConfig {
 
 export const CATEGORIES: CategoryConfig[] = [
   {
+    id: "cat-template-livechat",
+    slug: "template-livechat",
+    displayName: "Template Livechat",
+    description: "Template balasan cepat untuk member Livechat CS, pencarian kode PK, dan manajemen pesan.",
+    icon: "💬",
+    accentColor: "#FF6FB5",
+    gradient: "linear-gradient(135deg, #FF6FB5 0%, #FDA4AF 100%)",
+    sortOrder: 0,
+  },
+  {
     id: "cat-chrome-extension",
     slug: "chrome-extension",
     displayName: "Chrome Extension",
