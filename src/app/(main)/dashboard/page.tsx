@@ -7,34 +7,50 @@ import { Activity, Clock, Download, ArrowRight, FolderOpen, Star } from "lucide-
 import { CATEGORIES } from "@/config/categories";
 
 export default async function DashboardPage() {
-  const recentResources = await db.query.resource.findMany({
-    limit: 4,
-    orderBy: [desc(resource.createdAt)],
-    with: {
-      category: true,
-      tags: {
-        with: {
-          tag: true,
+  let recentResources: any[] = [];
+  let popularResources: any[] = [];
+  let totalResources = 0;
+
+  try {
+    recentResources = await db.query.resource.findMany({
+      limit: 4,
+      orderBy: [desc(resource.createdAt)],
+      with: {
+        category: true,
+        tags: {
+          with: {
+            tag: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("Dashboard error loading recent resources:", err);
+  }
 
-  const popularResources = await db.query.resource.findMany({
-    limit: 3,
-    orderBy: [desc(resource.downloadCount)],
-    with: {
-      category: true,
-      tags: {
-        with: {
-          tag: true,
+  try {
+    popularResources = await db.query.resource.findMany({
+      limit: 3,
+      orderBy: [desc(resource.downloadCount)],
+      with: {
+        category: true,
+        tags: {
+          with: {
+            tag: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("Dashboard error loading popular resources:", err);
+  }
 
-  const countResult = await db.select({ value: count() }).from(resource);
-  const totalResources = countResult[0]?.value || 0;
+  try {
+    const countResult = await db.select({ value: count() }).from(resource);
+    totalResources = countResult[0]?.value || 0;
+  } catch (err) {
+    console.error("Dashboard error counting resources:", err);
+  }
   const totalCategories = CATEGORIES.length;
 
   return (

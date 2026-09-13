@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Sidebar from "@/components/Sidebar";
 import SearchPalette from "@/components/SearchPalette";
 import { db } from "@/lib/db";
+import { ensureD1DatabaseReady } from "@/lib/ensure-d1";
 import { SEED_RESOURCES } from "@/config/seed-data";
 
 export default async function MainLayout({
@@ -10,12 +11,23 @@ export default async function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Fetch categories with resources to count
-  const categories = await db.query.category.findMany({
-    with: {
-      resources: true,
-    },
-  });
+  // Auto-initialize Cloudflare D1 tables if running on Cloudflare
+  await ensureD1DatabaseReady();
+
+  // Fetch categories safely
+  let categories: any[] = [];
+  let livechatTemplates: any[] = [];
+  let searchResources: any[] = [];
+
+  try {
+    categories = await db.query.category.findMany({
+      with: {
+        resources: true,
+      },
+    });
+  } catch (err) {
+    console.error("Error querying categories:", err);
+  }
   
   // Transform to { slug: count }
   const resourceCounts: Record<string, number> = {};
@@ -23,16 +35,23 @@ export default async function MainLayout({
     resourceCounts[cat.slug] = cat.resources ? cat.resources.length : 0;
   });
 
-  // Fetch livechat templates count and add to search
-  const livechatTemplates = await db.query.livechatTemplate.findMany();
+  try {
+    livechatTemplates = await db.query.livechatTemplate.findMany();
+  } catch (err) {
+    console.error("Error querying livechatTemplates:", err);
+  }
   resourceCounts["template-livechat"] = livechatTemplates.length;
 
   // Prepare searchable resources
-  const searchResources = await db.query.resource.findMany({
-    with: {
-      category: true,
-    },
-  });
+  try {
+    searchResources = await db.query.resource.findMany({
+      with: {
+        category: true,
+      },
+    });
+  } catch (err) {
+    console.error("Error querying search resources:", err);
+  }
 
   const formattedSearchResources = searchResources.map(r => ({
     id: r.id,
