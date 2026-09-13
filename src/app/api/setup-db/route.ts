@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { CATEGORIES } from "@/config/categories";
 import { SEED_RESOURCES } from "@/config/seed-data";
+import { PK_LIVECHAT_TEMPLATES } from "@/config/pk-macros";
 
 export const dynamic = "force-dynamic";
 
@@ -74,20 +75,27 @@ export async function GET() {
       ).run();
     }
 
-    // 4. Seed Livechat Templates
-    const sampleTemplates = [
-      { id: "lt-1", title: "Salam Pembuka Ramah", kodePk: "PK01", tag: "Umum", isFav: 1, count: 15, text: "Halo Kak! Selamat datang di layanan Livechat kami. 😊\nPerkenalkan saya CS yang bertugas hari ini. Ada yang bisa saya bantu untuk kendala atau transaksinya Kak?" },
-      { id: "lt-2", title: "Konfirmasi Deposit Diproses", kodePk: "PK-DP01", tag: "Deposit", isFav: 1, count: 38, text: "Baik Kak, mohon ditunggu sebentar ya. Form deposit Kakak saat ini sedang dibantu verifikasi dan dicek ke mutasi bank oleh tim finance kami. Kami akan kabari secepatnya begitu dana masuk ya Kak. Terima kasih atas kesabarannya. 🙏" },
-      { id: "lt-3", title: "Kendala Bank Gangguan / Pending", kodePk: "PK-DP-GANGGUAN", tag: "Deposit", isFav: 0, count: 9, text: "Mohon maaf atas ketidaknyamanannya Kak. Saat ini jaringan mutasi bank yang bersangkutan sedang mengalami gangguan/maintenance dari pihak perbankan. Begitu mutasi bank normal kembali, saldo Kakak akan langsung kami proseskan tanpa perlu konfirmasi ulang. Mohon kesabarannya ya Kak." },
-      { id: "lt-4", title: "Format Reset Password Akun", kodePk: "PK-RESET-PASS", tag: "Akun", isFav: 1, count: 22, text: "Untuk keamanan akun dan bantuan reset password, mohon lengkapi data verifikasi berikut ya Kak:\n- User ID:\n- Nama Rekening Terdaftar:\n- Nomor Rekening Terdaftar:\n- Email / Nomor HP:\nJika data sudah valid, password baru akan segera kami kirimkan." },
-      { id: "lt-5", title: "Konfirmasi Withdraw Sukses", kodePk: "PK-WD-BERHASIL", tag: "Withdraw", isFav: 0, count: 18, text: "Kabar baik Kak! Permintaan withdraw Kakak sudah berhasil kami proseskan dan dana telah berhasil ditransfer ke nomor rekening yang terdaftar. Silakan lakukan pengecekan saldo pada mutasi rekening Kakak ya. Terima kasih banyak Kak! 🎉" },
-      { id: "lt-6", title: "Salam Penutup Livechat", kodePk: "PK-CLOSING", tag: "Umum", isFav: 0, count: 42, text: "Sama-sama Kak, senang sekali bisa melayani Kakak. Apabila ada hal lain yang ingin ditanyakan, jangan ragu untuk menghubungi kami kembali ya Kak. Semoga harinya menyenangkan dan salam sukses selalu! ✨🌸" },
-    ];
+    // 4. Clean out old template data and seed all 372 real Perfect Keyboard Templates
+    await db.prepare("DELETE FROM LivechatTemplate").run();
 
-    for (const st of sampleTemplates) {
-      await db.prepare(
-        "INSERT OR IGNORE INTO LivechatTemplate (id, workspaceId, title, kodePk, content, categoryTag, isFavorite, usageCount, sortOrder, createdAt, updatedAt) VALUES (?, 'default-workspace', ?, ?, ?, ?, ?, ?, 0, unixepoch() * 1000, unixepoch() * 1000)"
-      ).bind(st.id, st.title, st.kodePk, st.text, st.tag, st.isFav, st.count).run();
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < PK_LIVECHAT_TEMPLATES.length; i += BATCH_SIZE) {
+      const chunk = PK_LIVECHAT_TEMPLATES.slice(i, i + BATCH_SIZE);
+      const stmts = chunk.map((t) =>
+        db.prepare(
+          "INSERT OR REPLACE INTO LivechatTemplate (id, workspaceId, title, kodePk, content, categoryTag, isFavorite, usageCount, sortOrder, createdAt, updatedAt) VALUES (?, 'default-workspace', ?, ?, ?, ?, ?, ?, ?, unixepoch() * 1000, unixepoch() * 1000)"
+        ).bind(
+          t.id,
+          t.title,
+          t.kodePk,
+          t.content,
+          t.categoryTag,
+          t.isFavorite ? 1 : 0,
+          t.usageCount,
+          t.sortOrder
+        )
+      );
+      await db.batch(stmts);
     }
 
     // Check counts
@@ -96,7 +104,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      message: "Cloudflare D1 database fully populated!",
+      message: "Cloudflare D1 database fully populated with all Perfect Keyboard templates!",
       totalResourcesInD1: resCount?.total || 0,
       totalLivechatTemplatesInD1: tmplCount?.total || 0,
     });
